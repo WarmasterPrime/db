@@ -4,7 +4,7 @@
 *author:					Daniel K. Valente
 *created:					10-04-2021
 *modified:					02-07-2022
-*license:					Copyright © 2022 All rights reserved.
+*license:					Apache 2.0
 *ver:						0.0.0.1
 *desc:						Provides a PHP class that allows for an easier database management system that automatically establishes and manages SQL stream connections and executes SQL queries based on the PHP array/object submitted to it.
 *patch-notes:				
