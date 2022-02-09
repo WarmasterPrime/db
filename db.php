@@ -3,11 +3,17 @@
 *title:						db.php
 *author:					Daniel K. Valente
 *created:					10-04-2021
-*modified:					02-07-2022
-*license:					Apache 2.0
-*ver:						0.0.0.1
+*modified:					02-08-2022
+*license:					Apache-2.0
+*ver:						0.0.0.2
 *desc:						Provides a PHP class that allows for an easier database management system that automatically establishes and manages SQL stream connections and executes SQL queries based on the PHP array/object submitted to it.
+*dev:						false
 *patch-notes:				
+0.0.0.2:
+	- Added the ability to generate a unique randomized string for true unique column values.
+	- Added the ability to generate a randomized string of x length.
+	- Added a NOT operator.
+0.0.0.1:
 	- Added custom SQL execution.
 	- Added software/system/api update functionality/method (Can be called via db::checkUpdates();).
 	- Added the ability to set the database username, password, server, and port if a config file is not specified.
@@ -30,7 +36,7 @@ II.) Configuring:
 if (!class_exists("db")) {
 class db {
 	// DO NOT MODIFIED LINE BELOW
-	protected static $ver="0.0.0.1";
+	protected static $ver="0.0.0.2";
 	// CONFIG:
 	private static $config_file=false;
 	private static $backup_dir=false;
@@ -51,7 +57,7 @@ class db {
 	private static $username="root";
 	private static $password="";
 	private static $server="localhost";
-	private static $port=3389;
+	private static $port=3306;
 	// Class constants:
 	private static $PHP_DATA_TYPES=array(
 		"string",
@@ -65,222 +71,7 @@ class db {
 		"NULL",
 		"resource"
 	);
-	public static $help="
-<style>
-.db-main{position:relative;left:50%;transform:translateX(-50%);width:calc(100% - 10px);height:auto;min-height:10px;padding:4px;}
-h1{text-align:center;border-bottom:1px solid #000;text-transform:uppercase;font-weight:bolder;}
-h2{position:relative;left:2.0em;text-align:left;font-weight:bold;border:1px solid #000;width:auto;display:inline-block;}
-pre{display:block;font-family:monospace;border:1px solid #000;background-color:rgb(30,30,30);color:#FFF;padding:4px;}
-var{color:rgb(200,150,50);}
-value, val{color:rgb(100,150,200);}
-int{color:rgb(255,200,50);}
-method{color:rgb(100,200,50);}
-str{color:rgb(200,50,255);}
-comment{color:rgb(100,100,100);}
-bool{color:rgb(50,200,150);}
-int{color:rgb(100,100,200);}
-</style>
-<div class='db-main'>
-	<h1>Setup</h1>
-	<h2>ini file</h2>
-	<pre>
-<var>server</var>=<value>localhost</value>
-<var>username</var>=<val>root</val>
-<var>password</var>=
-<var>port</var>=<int>3389</int>
-<var>backup_dir</var>=</pre>
-
-<h2>Linking Configuration File To System</h2>
-<ol>
-	<li>Copy absolute path of ini file.</li>
-	<li>Paste path of ini file into class ini method parameter.</li>
-</ol>
-<pre>
-db::<method>ini</method>(<var>[PATH]</var>);
-</pre>
-- This can be found within the <b><str>db.php</str></b> main file at the bottom.
-<br>
-<h1>API Documentation</h1>
-<h2>Setup</h2>
-<br>
-The way to implement a database query object is by creating the following...
-<pre>
-<var>\$db</var>=<str>\"database_name\"</str>;
-<var>\$tb</var>=<str>\"database_table_name\"</str>;
-<var>\$cmd</var>=<method>array</method>(
-	<str>\"action\"</str>=><str>\"[ACTION_NAME]\"</str>,
-	<str>\"column\"</str>,
-	<str>\"column\"</str>,
-	...
-);
-<comment>// The \"WHERE\" and \"LIKE\" clauses/cases are both similar in formatting.</comment>
-<var>\$where</var>=<method>array</method>(
-	<str>\"[COLUMN_NAME]\"</str>=><str>\"[COLUMN_VALUE]\"</str>,
-	<str>\"[COLUMN_NAME]\"</str>=><str>\"[COLUMN_VALUE]\"</str>,
-	...
-);
-<comment>// Specifying the \"[OR]\" operator will find records matching the \"ID\" value OR the \"NAME\" value. Mutiple can be included.</comment>
-<var>\$like</var>=<method>array</method>(
-	<str>\"[or]id\"</str>=><str>\"0\"</str>,
-	<str>\"[or]name\"</str>=><str>\"apples\"</str>,
-	...
-);
-
-<var>\$args</var>=<method>array</method>(
-	<str>\"db\"</str>=<var>\$db</var>,
-	<str>\"tb\"</str>=<var>\$tb</var>,
-	<str>\"cmd\"</str>=<var>\$cmd</var>,
-	<str>\"where\"</str>=<var>\$where</var>
-);
-<var>\$res</var>=db::<method>connect</method>(<var>\$args</var>);
-</pre>
-<br>
-- Depending on the specified action, you won't need to specify other properties such as the database name (\"DB\") or even table name...
-<br><br>
-
-<h2>Action Names:</h2>
-<br>
-<pre>
-<str>select</str>:					Returns an array of values from the specified columns (Not to be confused with the \"WHERE\" or \"LIKE\" clause(s)).
-<str>insert</str>:					Adds a new record consisting of data specified with the columns and their respective values (Not to be confused with the \"WHERE\" or \"LIKE\" clause(s)).
-<str>update</str>:					Changes an existing record based on the respective column names and their values, matching a where clause.
-<str>get_db</str>:					Returns an array consisting of all the databases on the current server.
-<str>get_tb</str>:					Returns an array consisting of all database tables. Can be used with a where clause.
-<str>get_type</str>:				Returns the data-type of the specified column names.
-<str>delete</str>:					Removes either a record, database table, or database depending if there is a where clause specifying which records to delete or not.
-<str>reset_id</str>:				Resets the unique ID counter that is already generated upon database creation.
-<str>new_db</str>:					Creates a new database based on the specified name provided within the arguments array/object.
-<str>new_tb</str>:					Creates a new database table based on the specified name provided within the arguments array/object.
-<str>db_tb_exist_auto</str>:			Creates a new database and/or database table if they don't exist. You should specify the column names and their data-types within the \"CMD\" array/object.
-<str>new_col</str>:				Creates a new column within a specified database table.
-<str>count</str>:					Returns the number of records either in total, or matching the where clause.
-<str>db_exist</str>:				Returns a boolean determining if the database exists.
-<str>tb_exist</str>:				Returns a boolean determining if the table exists.
-<str>drop_db</str>:				Deletes a database.
-<str>drop_tb</str>:				Deletes a table.
-<str>db-list</str>:				Returns an array of databases on the server.
-<str>tb-list</str>:				Returns an array of tables on the server.
-<str>backup</str>:					Conducts a backup of the database files to the directory specified within the ini file.
-<str>get-types</str>:				Returns an array consisting of the data-types for the columns within a table.
-<str>exists</str>:					Returns a boolean indicating if the record exists within the table.
-<str>custom</str>:					Executes a custom SQL script.
-<str>sql</str>:					Executes a custom SQL script.
-</pre>
-<br>
-<h2>Short-hand Data-Types:</h2>
-<br>
-<pre>
-<str>string</str>
-<int>int</int>
-<bool>bool</bool>
-<var>file</var>
-<var>blob</var>
-<var>img</var>
-</pre>
-<br>
-<h2>Examples:</h2>
-<br>
-<b>DB-TB Exists Auto:</b>
-<pre>
-<var>\$db</var>=<str>\"start\"</str>;
-<var>\$tb</var>=<str>\"accounts\"</str>;
-<var>\$cmd</var>=<method>array</method>(
-	<str>\"action\"</str>=><str>\"db_tb_exist_auto\"</str>,
-	<str>\"username\"</str>=><str>\"string\"</str>,
-	<str>\"password\"</str>=><str>\"string\"</str>,
-	<str>\"email\"</str>=><str>\"string\"</str>,
-	<str>\"phone_number\"</str>=><str>\"string\"</str>,
-	<str>\"timestamp\"</str>=><str>\"int\"</str>
-);
-<var>\$args</var>=<method>array</method>(
-	<str>\"db\"</str>=><var>\$db</var>,
-	<str>\"tb\"</str>=><var>\$tb</var>,
-	<str>\"cmd\"</str>=><var>\$cmd</var>
-);
-<var>\$res</var>=db::<method>connect</method>(<var>\$args</var>); <comment>// Should always return true or 1.</comment>
-</pre>
-
-<b>Select:</b>
-<pre>
-<var>\$db</var>=<str>\"start\"</str>;
-<var>\$tb</var>=<str>\"accounts\"</str>;
-<var>\$cmd</var>=<method>array</method>(
-	<str>\"action\"</str>=><str>\"select\"</str>,
-	<str>\"username\"</str>,
-	<str>\"password\"</str>,
-	<str>\"email\"</str>,
-	<str>\"phone_number\"</str>,
-	<str>\"timestamp\"</str>
-);
-<comment>// Or...</comment>
-<var>\$cmd</var>=<method>array</method>(
-	<str>\"action\"</str>=><str>\"select\"</str>,
-	<str>\"*\"</str>
-);
-<comment>// (OPTIONAL) Where/Like:</comment>
-<var>\$where</var>=<method>array</method>(
-	<str>\"username\"</str>=><var>\$username</var>,
-	<str>\"password\"</str>=><var>\$password</var>
-);
-
-
-<var>\$args</var>=<method>array</method>(
-	<str>\"db\"</str>=><var>\$db</var>,
-	<str>\"tb\"</str>=><var>\$tb</var>,
-	<str>\"cmd\"</str>=><var>\$cmd</var>,
-	<str>\"where\"</str>=><var>\$where</var>
-);
-<var>\$res</var>=db::<method>connect</method>(<var>\$args</var>); <comment>// Returns an array of matching records consisting of the columns specified within the \"CMD\" array.</comment>
-</pre>
-
-<b>Update</b>
-<pre>
-<var>\$db</var>=<str>\"start\"</str>;
-<var>\$tb</var>=<str>\"accounts\"</str>;
-<var>\$cmd</var>=<method>array</method>(
-	<str>\"action\"</str>=><str>\"update\"</str>,
-	<str>\"username\"</str>=><str>\"apples\"</str>,
-	<str>\"password\"</str>=><str>\"oranges\"</str>,
-	<str>\"email\"</str>=><str>\"pears\"</str>,
-	<str>\"phone_number\"</str>=><str>\"grapes\"</str>,
-	<str>\"timestamp\"</str>=><int>184784543</int>
-);
-<var>\$where</var>=<method>array</method>(
-	<str>\"username\"</str>=><str>\"oranges\"</str>,
-	<str>\"password\"</str>=><var>\$password</var>
-);
-<var>\$args</var>=<method>array</method>(
-	<str>\"db\"</str>=><var>\$db</var>,
-	<str>\"tb\"</str>=><var>\$tb</var>,
-	<str>\"cmd\"</str>=><var>\$cmd</var>,
-	<str>\"where\"</str>=><var>\$where</var>
-);
-<var>\$res</var>=db::<method>connect</method>(<var>\$args</var>);
-</pre>
-
-<b>Insert:</b>
-<pre>
-<var>\$db</var>=<str>\"start\"</str>;
-<var>\$tb</var>=<str>\"accounts\"</str>;
-<var>\$cmd</var>=<method>array</method>(
-	<str>\"action\"</str>=><str>\"insert\"</str>,
-	<str>\"username\"</str>=><str>\"apples\"</str>,
-	<str>\"password\"</str>=><str>\"oranges\"</str>,
-	<str>\"email\"</str>=><str>\"pears\"</str>,
-	<str>\"phone_number\"</str>=><str>\"grapes\"</str>,
-	<str>\"timestamp\"</str>=><int>184784543</int>
-);
-<var>\$args</var>=<method>array</method>(
-	<str>\"db\"</str>=><var>\$db</var>,
-	<str>\"tb\"</str>=><var>\$tb</var>,
-	<str>\"cmd\"</str>=><var>\$cmd</var>
-);
-<var>\$res</var>=db::<method>connect</method>(<var>\$args</var>);
-</pre>
-
-
-</div>
-";
+	public static $help=false;
 	// Error handling...
 	private static function error($q=0) {
 		$res="An unknown error has occurred.";
@@ -333,7 +124,43 @@ The way to implement a database query object is by creating the following...
 		} else {
 			//var_dump($__db);
 		}
+		self::$help=self::getHelp();
 		return self::$help;
+	}
+	// Returns an HTML string consisting of the help information.
+	public static function getHelp() {
+		//$p=preg_replace("/(\\\\)/","/",__DIR__)."/db_help.html";
+		$p=dirname(self::$config_file)."/db_help.html";
+		$res=false;
+		$f=false;
+		if (file_exists($p)) {
+			if (is_file($p)) {
+				if (strtolower(pathinfo($p)["extension"])==="html") {
+					if (self::$help===false) {
+						//$res=file_get_contents($p);
+						if (filesize($p)>0) {
+							$f=fopen($p,"r");
+							$res=fread($f,filesize($p));
+							fclose($f);
+							if (strstr($res,"\\\"")) {
+								$res=preg_replace("/\\\\\"/","\"",$res);
+							}
+							//$res=preg_replace("/([\\\\]*\$)/","",$res);
+							if (strstr($res,"$")) {
+								//var_dump(preg_match("/([\\\\]*\$)/",$res));
+								$res=preg_replace("/([\\\\]*\$)/","",$res);
+							}
+						} else {
+							$res="No Help Found";
+						}
+					} else {
+						$res=self::$help;
+					}
+				}
+			}
+		}
+		unset($p,$f);
+		return $res;
 	}
 	// Checks for updates on this class object.
 	public static function checkUpdates() {
@@ -361,6 +188,7 @@ The way to implement a database query object is by creating the following...
 	private static function parseMeta($q=false){return json_decode($q,true);}
 	// Submits a request to download an updated version of this software.
 	private static function downloadUpdate() {
+		$res=false;
 		$q=file_get_contents("http://doft.ddns.net/software/db/update.php");
 		$f=false;
 		$p=false;
@@ -374,14 +202,21 @@ The way to implement a database query object is by creating the following...
 				$f=fopen($p,"w");
 				fwrite($f,$q);
 				fclose($f);
+				$res=true;
 			} else {
-				self::error(2);
-				var_dump($q);
+				if ($q==="false") {
+					//$res=false;
+				} else {
+					self::error(2);
+				}
+				//var_dump($q);
 			}
 		} else {
 			self::error(1);
-			var_dump($q);
+			//var_dump($q);
 		}
+		unset($q,$f,$p);
+		return $res;
 	}
 	// Sets/Specifies the database username.
 	public static function setUsername($q=false) {
@@ -578,9 +413,21 @@ The way to implement a database query object is by creating the following...
 	// Opens a new database connection.
 	private static function dbOpen() {
 		$txt=true;
+		$tmp="";
+		$port=3306;
 		//var_dump((self::$server!==false && self::$username!==false && self::$password!==false));
 		if (self::$server!==false && self::$username!==false && self::$password!==false) {
-			self::$con = new mysqli(self::$server,self::$username,self::$password);
+			if (self::$db!==false) {
+				$tmp=self::$db;
+			}
+			if (self::$port!==false) {
+				$port=self::$port;
+			}
+			if ($port!==false) {
+				self::$con = new mysqli(self::$server,self::$username,self::$password,$tmp,$port);
+			} else {
+				self::$con = new mysqli(self::$server,self::$username,self::$password);
+			}
 			//var_dump(self::$con);
 			if (self::$con->connect_error) {
 				self::$con=false;
@@ -624,8 +471,6 @@ The way to implement a database query object is by creating the following...
 			if (!self::$persistent) {				// Check if persistent data is enabled (Determines if the resulting array should be reset/cleared to avoid including results from SQL queries used by this class object, thus avoiding unnecessary data).
 				self::$res=array();					// Reset the output object/array.
 			}
-			//var_dump($r);
-			//var_dump(self::$con);
 			if (self::$con!==false) {				// Check if the connection was successfully established.
 				$t=gettype($sql);					// Get the data-type of the SQL argument (Ensures that the SQL query is a string.
 				if ($t==="string") {				// Checks if the data-type of the SQL argument is a string.
@@ -649,10 +494,6 @@ The way to implement a database query object is by creating the following...
 							}
 							$p++;
 						}
-						
-						//var_dump($pass);
-						
-						// &&self::$action!=="
 						// Depending on the action specified, a series/set of proceedures are needed to be done in order to extract and convert the results from a RAW SQL data object to a PHP array/object.
 						if ($pass) {
 							if (gettype($s)==="object") {						// Checks if the data-type of the results if an object.
@@ -682,7 +523,6 @@ The way to implement a database query object is by creating the following...
 								self::$res=$s;									// Sets the absolute final result as the RAW data structure/object received directly by the query result.
 								$txt=$s;										// Sets the resultant variable to that of the RAW data structure.
 							}
-							
 						} else {
 							if ($s->num_rows>0) {								// Checks if there's any data to iterate through.
 								$i=0;											// Sets iteration counter to 0.
@@ -864,6 +704,9 @@ The way to implement a database query object is by creating the following...
 		if (strstr($q,"[or]") || strstr($q,"[OR]")) {
 			$q=preg_replace("/(\[or\])/i","",$q);
 			$st="OR";
+		} else if (strstr($q,"!")) {
+			$q=preg_replace("/(\!)/","",$q);
+			$st="NOT";
 		} else {
 			$st="AND";
 		}
@@ -955,7 +798,7 @@ The way to implement a database query object is by creating the following...
 			$i++;
 		}
 		if (count($exclude)>0) {
-			$constraints=self::genUnique($exclude);
+			$constraints=self::genUniqueID($exclude);
 			if (strlen($constraints)>0) {
 				$constraints=",".$constraints;
 			}
@@ -1030,7 +873,7 @@ The way to implement a database query object is by creating the following...
 		return $q;
 	}
 	// Returns a generated string of unique columns.
-	private static function genUnique($arr=false) {
+	private static function genUniqueID($arr=false) {
 		$txt="";
 		$i=0;
 		$lim=0;
@@ -1050,6 +893,54 @@ The way to implement a database query object is by creating the following...
 		}
 		unset($i,$lim,$arr);
 		return $txt;
+	}
+	// Returns a unique string of characters x character long, within a specified column.
+	private static function genUnique($column=false,$length=0) {
+		$res=false;
+		$sql=false;
+		$i=0;
+		$tmp=false;
+		if (gettype($column)==="string" && gettype($length)==="integer") {
+			$res=self::randomize($length);
+			$sql="SELECT * FROM `".self::$db."`.`".self::$tb."` WHERE `".$column."`=\"".$res."\";";
+			$tmp=self::dbSend($sql);
+			//var_dump($tmp);
+			if (gettype($tmp)==="array") {
+				if (!(count($tmp)>0)) {
+					while(count($tmp)>0){
+						$res=self::randomize($length);
+						$tmp=self::dbSend("SELECT * FROM `".self::$db."`.`".self::$tb."` WHERE `".$column."`=\"".$res."\";");
+					}
+				}
+			}
+		} else {
+			$res=false;
+		}
+		unset($column,$length,$sql,$i,$tmp);
+		return $res;
+	}
+	// Returns a randomized numerical value.
+	public static function randomize($q=0) {
+		$res="";
+		$tmp=0;
+		$t=0;
+		$i=0;
+		while($i<$q){
+			$t=rand(0,3);
+			if ($t===0) {
+				$tmp=rand(48,57);
+			} else if ($t===1) {
+				$tmp=rand(65,90);
+			} else if ($t===2) {
+				$tmp=rand(94,95);
+			} else if ($t===3) {
+				$tmp=rand(97,126);
+			}
+			$res=$res.chr($tmp);
+			$i++;
+		}
+		unset($q,$tmp,$t,$i);
+		return $res;
 	}
 	// Returns an array of databases existing on the system.
 	private static function getDatabases() {
@@ -1183,6 +1074,7 @@ The way to implement a database query object is by creating the following...
 		$value="";
 		$lt=false;		// Data-type of database table column.
 		$t=false;		// Data-type of variable.
+		$tmp=false;
 		while($i<$lim){
 			$value=self::$values[$i];
 			if (array_search(self::$cols[$i],$list)) {
@@ -1200,30 +1092,45 @@ The way to implement a database query object is by creating the following...
 				$value="\"".self::encode($value)."\"";
 				//$value=self::encode($value);
 			}
-			
 			if (gettype($value)==="boolean") {
 				$value=self::convertType($value,"integer");
 			}
-			
-			
-			
+			if (isset(self::$cols[$i])) {
+				if (preg_match("/\[([0-9]*)\]/",self::$cols[$i],$tmp)) {
+					$tmp=intval($tmp[1]);
+					self::$cols[$i]=preg_replace("/(\[[0-9]*\])/","",self::$cols[$i]);
+					$value=self::genUnique(self::$cols[$i],$tmp);
+				}
+			}
 			if ($i>0) {
 				$c.=", `" . self::$cols[$i] . "`";
-				$v.=", " . $value . "";
+				$v.=", \"" . self::parseSQL($value) . "\"";
 			} else {
 				$c.="`" . self::$cols[$i] . "`";
-				$v.="" . $value . "";
+				$v.="\"" . self::parseSQL($value) . "\"";
 			}
-			
-			
 			$i++;
 		}
 		$where=self::getWhere();
 		$sql="INSERT INTO `" . self::$db . "`.`" . self::$tb . "` (" . $c . ") VALUES (" . $v . ") " . $where . ";";
 		//var_dump($sql);
+		//var_dump($sql);
 		$res=self::dbSend($sql);
-		unset($sql,$where,$i,$v,$c,$lim,$value,$o,$limit,$list,$lt,$t);
+		$res=true;
+		unset($sql,$where,$i,$v,$c,$lim,$value,$o,$limit,$list,$lt,$t,$tmp);
 		return $res;
+	}
+	// Returns an SQL-safe string.
+	private static function parseSQL($q=false) {
+		if (gettype($q)==="string") {
+			if (strstr($q,"\\")) {
+				$q=preg_replace("/(\\\\)/","\\\\",$q);
+			}
+			if (strstr($q,"\"")) {
+				$q=preg_replace("/(\")/","\\\"",$q);
+			}
+		}
+		return $q;
 	}
 	// Returns a converted version of the variable received to a specified data-type (If possible).
 	private static function convertType($var="false",$type="string") {
@@ -1623,6 +1530,8 @@ The way to implement a database query object is by creating the following...
 		unset($item,$value,$obj);
 		return self::dbSend($sql);
 	}
+	
+	
 	// A public class method that processes the SQL query object.
 	public static function connect($q=false) {
 		//var_dump($q);
